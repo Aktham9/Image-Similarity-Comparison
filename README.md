@@ -1,8 +1,8 @@
 # Malware Mutation Detection
-Overview
+##Overview
 This repository contains a Python script for detecting mutations in malware families by comparing images representing different malware samples. The script uses Structural Similarity Index (SSIM) and pixel difference to identify similar images across different malware families.
 
-Features
+##Features
 Converts images to black and white for standardized comparison.
 Uses SSIM and pixel difference to detect similarity while excluding identical images.
 Compares images across different malware families (folders) only.
