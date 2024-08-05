@@ -6,11 +6,6 @@ This repository contains a script designed to identify mutations in malware by c
 - [Introduction](#introduction)
 - [Features](#features)
 - [Installation](#installation)
-- [Usage](#usage)
-- [Visualization](#visualization)
-- [Results](#results)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Introduction
 Malware evolves over time, and identifying mutations across different malware families is crucial for cybersecurity. This project provides a method to detect these mutations by comparing images that represent malware samples.
