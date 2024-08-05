@@ -44,8 +44,6 @@ tolerance = 400
 ssim_threshold = 0.95
 
 # Path to the main data directory
-#data_dir = pathlib.Path('./NewStructure')
-#data_dir = pathlib.Path(r'D:\Experimenty\Experimenty\NewStructure')
 data_dir = pathlib.Path('../Data_test')
 
 # Collect image paths from all subfolders
@@ -122,7 +120,7 @@ df_results = pd.DataFrame(results)
 red_font = Font(color="FF0000", bold=True)
 
 # Save to Excel with formatting, split into multiple sheets if necessary
-output_excel = 'Final_version_Similarity_V21.xlsx'
+output_excel = 'Final_version_Similarity.xlsx'
 max_rows_per_sheet = 1048575  # one less than the maximum rows in an Excel sheet to account for the header
 
 with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
@@ -155,7 +153,7 @@ dissimilar_count = len(similarity_df) - similar_count
 plt.figure(figsize=(8, 8))
 plt.pie([similar_count, dissimilar_count], labels=['Similar', 'Dissimilar'], autopct='%1.1f%%', colors=['#66b3ff','#ff9999'])
 plt.title('Proportion of Similar vs. Dissimilar Samples')
-plt.savefig('pie_chart_similarity1.png')
+plt.savefig('pie_chart_similarity.png')
 plt.show()
 
 # 2. Histogram of SSIM Scores
@@ -164,7 +162,7 @@ sns.histplot(similarity_df['SSIM'], kde=True, bins=30)
 plt.title('Distribution of SSIM Scores')
 plt.xlabel('SSIM Score')
 plt.ylabel('Frequency')
-plt.savefig('histogram_ssim1.png')
+plt.savefig('histogram_ssim.png')
 plt.show()
 
 # 3. Box Plot of SSIM Scores
@@ -173,7 +171,7 @@ sns.boxplot(x='Is Similar', y='SSIM', data=similarity_df)
 plt.title('Box Plot of SSIM Scores')
 plt.xlabel('Similarity')
 plt.ylabel('SSIM Score')
-plt.savefig('boxplot_ssim1.png')
+plt.savefig('boxplot_ssim.png')
 plt.show()
 
 # 4. Bar Chart of Similarity Counts per Folder (Family)
@@ -183,7 +181,7 @@ folder_similar_counts.plot(kind='bar')
 plt.title('Number of Similar Image Pairs per Folder (Family)')
 plt.xlabel('Family')
 plt.ylabel('Count of Similar Pairs')
-plt.savefig('bar_chart_folder_similarity1.png')
+plt.savefig('bar_chart_folder_similarity.png')
 plt.show()
 
 # 5. Bar Chart of Similarity Counts within Same Folder vs. Different Folders
@@ -194,7 +192,7 @@ plt.bar(['Same Family', 'Different Families'], [same_folder_count, different_fol
 plt.title('Similarity Counts within Same Family vs. Different Families')
 plt.xlabel('Comparison Type')
 plt.ylabel('Count of Similar Pairs')
-plt.savefig('bar_chart_same_vs_different_folders1.png')
+plt.savefig('bar_chart_same_vs_different_folders.png')
 plt.show()
 
 # 6. Line Chart of Processing Time
@@ -203,7 +201,7 @@ plt.plot([0, len(similarity_df)], [0, processing_time], marker='o')
 plt.title('Processing Time')
 plt.xlabel('Number of Image Comparisons')
 plt.ylabel('Time (seconds)')
-plt.savefig('line_chart_processing_time1.png')
+plt.savefig('line_chart_processing_time.png')
 plt.show()
 
 # 7. Scatter Plot of Pixel Differences vs. SSIM Scores
@@ -212,5 +210,5 @@ sns.scatterplot(x='Pixel Difference', y='SSIM', hue='Is Similar', data=similarit
 plt.title('Pixel Differences vs. SSIM Scores')
 plt.xlabel('Pixel Difference')
 plt.ylabel('SSIM Score')
-plt.savefig('scatterplot_pixel_difference_ssim1.png')
+plt.savefig('scatterplot_pixel_difference_ssim.png')
 plt.show()
