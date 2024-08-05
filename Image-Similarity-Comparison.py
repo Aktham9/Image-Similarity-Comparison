@@ -47,22 +47,8 @@ def compare_images(image_path1, image_path2, tolerance, ssim_threshold):
     return ssim_index > ssim_threshold and 0 < pixel_difference <= tolerance
 
 # File paths to the uploaded images
-#image_path1 = '103_PHP.Faketool.AF trojan  512x512.jpg'
-#image_path2 = '33_Win32.Adware.SafetyAntiSpyware.A application  512x512.jpg'
-#image_path1 = '68_Win32.TrojanDownloader.Wauchos.AD trojan  512x512.jpg'
-#image_path2 = '82_Win32.Injector.EJAD trojan  512x512.jpg'
-#image_path1 = '101_Win32.Autoit.AD trojan  512x512.jpg'
-#image_path2 ='18_Win32.Autoit.NGN trojan  512x512.jpg'
-#image_path2 ='126_Win32.Autoit.NSB trojan  512x512.jpg'
-#image_path1 = '90_Win32.TrojanDownloader.Wauchos.AF trojan  512x512.jpg'
-#image_path2 ='124_NSIS.TrojanClicker.AD trojan  512x512.jpg'
-#image_path1 = '65_Win32.Dlhelper.AD potentially unwanted application  512x512.jpg'
-#image_path2 ='121_Win32.Dridex.U trojan  512x512.jpg'
-#image_path2 ='6_Win32.TrojanDownloader.Wauchos.AD trojan  512x512.jpg'
-#image_path1 = '120_Win32.TrojanDropper.Delf.AF trojan  512x512.jpg'
-#image_path2 ='57_Win32.InstallCore.AFR potentially unwanted application  512x512.jpg'
-image_path1 = '75_Win32.Lethic.AF trojan  512x512.jpg'
-image_path2 ='109_Win32.Lethic.AF trojan  512x512.jpg'
+image_path1 = ''
+image_path2 =''
 # Define a tolerance level for the difference in black pixels and SSIM threshold
 tolerance = 400  # Adjust this value as needed
 ssim_threshold = 0.95  # Adjust this value as needed
