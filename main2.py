@@ -55,43 +55,63 @@ results = []
 similarity_data = []
 
 # Function to compare images in a folder and subsequent folders
-def compare_images_in_folder(subfolder, image_paths, all_features_dict, tolerance, ssim_threshold):
+def compare_images_in_folder(subfolder, image_paths, all_features_dict, tolerance, ssim_threshold, compared_pairs):
     folder_results = []
-    compared_pairs = set()
     
+    # Add the starting comparison marker for the current folder
     folder_results.append({'Image 1': f'Starting comparisons for folder: {subfolder.name}', 'Image 2': ''})
     
+    subfolder_list = list(all_features_dict.keys())
+    current_index = subfolder_list.index(subfolder)
+    
     for i in tqdm(range(len(image_paths)), desc=f"Processing {subfolder.name} folder", ncols=100):
-        image_1_path = str(image_paths[i])
+        image_1_path = os.path.normpath(str(image_paths[i])).lower()
         
         # Compare with images in subsequent folders
-        for other_subfolder, other_image_paths in all_features_dict.items():
-            if other_subfolder == subfolder:
-                continue
+        for j in range(current_index + 1, len(subfolder_list)):
+            other_subfolder = subfolder_list[j]
+            other_image_paths = all_features_dict[other_subfolder]
+            
             for k in range(len(other_image_paths)):
-                image_2_path = str(other_image_paths[k])
+                image_2_path = os.path.normpath(str(other_image_paths[k])).lower()
+                
+                # Create a sorted tuple of the pair to ensure uniqueness
                 pair = tuple(sorted([image_1_path, image_2_path]))
+                
+                # Check if the pair has already been compared
                 if pair not in compared_pairs:
+                    # Perform the comparison
                     ssim_index, pixel_difference, are_similar = compare_images(image_1_path, image_2_path, tolerance, ssim_threshold)
-                    similarity_data.append((subfolder.name, other_subfolder.name, ssim_index, pixel_difference, are_similar))
+                    
+                    # Add the pair to the set of compared pairs
+                    compared_pairs.add(pair)
+                    
+                    # Record the comparison result
                     if are_similar:
                         folder_results.append({
                             'Image 1': f'=HYPERLINK("{image_1_path}", "{subfolder.name}/{os.path.basename(image_1_path)}")',
                             'Image 2': f'=HYPERLINK("{image_2_path}", "{other_subfolder.name}/{os.path.basename(image_2_path)}")'
                         })
-                    compared_pairs.add(pair)
     
+    # Return the organized results for this folder
     return folder_results
 
 # Track processing time
 start_time = time.time()
 
+# Initialize the set to track compared pairs
+compared_pairs = set()
+
 # Use ThreadPoolExecutor to process folders in parallel
 with ThreadPoolExecutor() as executor:
-    futures = {executor.submit(compare_images_in_folder, subfolder, image_paths, image_paths_dict, tolerance, ssim_threshold): subfolder for subfolder, image_paths in image_paths_dict.items()}
+    futures = {executor.submit(compare_images_in_folder, subfolder, image_paths, image_paths_dict, tolerance, ssim_threshold, compared_pairs): subfolder for subfolder, image_paths in image_paths_dict.items()}
     for future in as_completed(futures):
-        folder_results = future.result()
-        results.extend(folder_results)
+        try:
+            folder_results = future.result()
+            # Append results in the correct order
+            results.extend(folder_results)
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 # Track end time
 end_time = time.time()
@@ -104,7 +124,7 @@ df_results = pd.DataFrame(results)
 red_font = Font(color="FF0000", bold=True)
 
 # Save to Excel with formatting, split into multiple sheets if necessary
-output_excel = 'Final_version_Similarity_V3.xlsx'
+output_excel = 'Final_version_Similarity_V4.xlsx'
 max_rows_per_sheet = 1048575  # one less than the maximum rows in an Excel sheet to account for the header
 
 with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
@@ -125,75 +145,3 @@ with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
                     cell.font = red_font
 
 print(f"Results saved to {output_excel}")
-
-# Convert similarity data to DataFrame
-similarity_df = pd.DataFrame(similarity_data, columns=['Folder 1', 'Folder 2', 'SSIM', 'Pixel Difference', 'Is Similar'])
-
-
-# Visualizations
-
-# 1. Pie Chart of Similar vs. Dissimilar Samples
-similar_count = similarity_df['Is Similar'].sum()
-dissimilar_count = len(similarity_df) - similar_count
-plt.figure(figsize=(8, 8))
-plt.pie([similar_count, dissimilar_count], labels=['Similar', 'Dissimilar'], autopct='%1.1f%%', colors=['#66b3ff','#ff9999'])
-plt.title('Proportion of Similar vs. Dissimilar Samples')
-plt.savefig('pie_chart_similarity.png')
-plt.show()
-
-# 2. Histogram of SSIM Scores
-plt.figure(figsize=(10, 6))
-sns.histplot(similarity_df['SSIM'], kde=True, bins=30)
-plt.title('Distribution of SSIM Scores')
-plt.xlabel('SSIM Score')
-plt.ylabel('Frequency')
-plt.savefig('histogram_ssim.png')
-plt.show()
-
-# 3. Box Plot of SSIM Scores
-plt.figure(figsize=(10, 6))
-sns.boxplot(x='Is Similar', y='SSIM', data=similarity_df)
-plt.title('Box Plot of SSIM Scores')
-plt.xlabel('Similarity')
-plt.ylabel('SSIM Score')
-plt.savefig('boxplot_ssim.png')
-plt.show()
-
-# 4. Bar Chart of Similarity Counts per Folder (Family)
-folder_similar_counts = similarity_df[similarity_df['Is Similar']].groupby('Folder 1').size()
-plt.figure(figsize=(12, 8))
-folder_similar_counts.plot(kind='bar')
-plt.title('Number of Similar Image Pairs per Folder (Malware Family)')
-plt.xlabel('Malware Family')
-plt.ylabel('Count of Similar Pairs')
-plt.savefig('bar_chart_folder_similarity.png')
-plt.show()
-
-# 5. Bar Chart of Similarity Counts within Same Family vs. Different Families
-same_folder_count = similarity_df[(similarity_df['Is Similar']) & (similarity_df['Folder 1'] == similarity_df['Folder 2'])].shape[0]
-different_folder_count = similarity_df[(similarity_df['Is Similar']) & (similarity_df['Folder 1'] != similarity_df['Folder 2'])].shape[0]
-plt.figure(figsize=(8, 6))
-plt.bar(['Same Family', 'Different Families'], [same_folder_count, different_folder_count], color=['#66b3ff','#ff9999'])
-plt.title('Similarity Counts within Same Malware Family vs. Different Families')
-plt.xlabel('Comparison Type')
-plt.ylabel('Count of Similar Pairs')
-plt.savefig('bar_chart_same_vs_different_folders.png')
-plt.show()
-
-# 6. Line Chart of Processing Time
-plt.figure(figsize=(10, 6))
-plt.plot([0, len(similarity_df)], [0, processing_time], marker='o')
-plt.title('Processing Time')
-plt.xlabel('Number of Image Comparisons')
-plt.ylabel('Time (seconds)')
-plt.savefig('line_chart_processing_time.png')
-plt.show()
-
-# 7. Scatter Plot of Pixel Differences vs. SSIM Scores
-plt.figure(figsize=(10, 6))
-sns.scatterplot(x='Pixel Difference', y='SSIM', hue='Is Similar', data=similarity_df)
-plt.title('Pixel Differences vs. SSIM Scores')
-plt.xlabel('Pixel Difference')
-plt.ylabel('SSIM Score')
-plt.savefig('scatterplot_pixel_difference_ssim.png')
-plt.show()
