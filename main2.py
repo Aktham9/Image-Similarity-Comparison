@@ -54,7 +54,7 @@ image_paths_dict = {subfolder: list(subfolder.glob('*.jpg')) + list(subfolder.gl
 results = []
 similarity_data = []
 
-# Function to compare images in a folder and subsequent folders
+# Function to compare images in a subsequent folders
 def compare_images_in_folder(subfolder, image_paths, all_features_dict, tolerance, ssim_threshold, compared_pairs):
     folder_results = []
     
