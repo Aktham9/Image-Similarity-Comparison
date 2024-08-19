@@ -92,6 +92,8 @@ def compare_images_in_folder(subfolder, image_paths, all_features_dict, toleranc
                             'Image 1': f'=HYPERLINK("{image_1_path}", "{subfolder.name}/{os.path.basename(image_1_path)}")',
                             'Image 2': f'=HYPERLINK("{image_2_path}", "{other_subfolder.name}/{os.path.basename(image_2_path)}")'
                         })
+                    # Append to similarity_data for later visualization
+                    similarity_data.append((subfolder.name, other_subfolder.name, ssim_index, pixel_difference, are_similar))
     
     # Return the organized results for this folder
     return folder_results
@@ -104,12 +106,16 @@ compared_pairs = set()
 
 # Use ThreadPoolExecutor to process folders in parallel
 with ThreadPoolExecutor() as executor:
-    futures = {executor.submit(compare_images_in_folder, subfolder, image_paths, image_paths_dict, tolerance, ssim_threshold, compared_pairs): subfolder for subfolder, image_paths in image_paths_dict.items()}
-    for future in as_completed(futures):
+    futures = []
+    # Submit all folders to be processed
+    for subfolder, image_paths in image_paths_dict.items():
+        futures.append(executor.submit(compare_images_in_folder, subfolder, image_paths, image_paths_dict, tolerance, ssim_threshold, compared_pairs))
+    
+    # Collect results in the order they were submitted
+    for future in futures:
         try:
-            folder_results = future.result()
-            # Append results in the correct order
-            results.extend(folder_results)
+            folder_results = future.result()  # Ensure results are collected in the order of submission
+            results.extend(folder_results)    # Append results in the correct order
         except Exception as e:
             print(f"An error occurred: {e}")
 
@@ -145,3 +151,95 @@ with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
                     cell.font = red_font
 
 print(f"Results saved to {output_excel}")
+
+# Convert similarity data to DataFrame with correct column names
+similarity_df = pd.DataFrame(similarity_data, columns=['Folder 1', 'Folder 2', 'SSIM', 'Pixel Difference', 'Is Similar'])
+
+#print(similarity_df)
+
+
+# Ensure Is Similar column is binary
+similarity_df['Is Similar'] = similarity_df['Is Similar'].astype(int)
+
+# Count the number of similar images between each pair of folders
+similarity_counts = similarity_df[similarity_df['Is Similar'] == 1].groupby(['Folder 1', 'Folder 2']).size().unstack(fill_value=0)
+
+
+# Ensure the matrix is symmetrical
+similarity_counts = similarity_counts.add(similarity_counts.T, fill_value=0)
+
+# Replace NaN values with 0 for cleaner visualization
+similarity_counts = similarity_counts.fillna(0)
+
+# Function to format large numbers
+def format_large_numbers(val):
+    if val >= 1_000_000:
+        return f'{val/1_000_000:.1f}M'
+    elif val >= 1_000:
+        return f'{val/1_000:.1f}k'
+    else:
+        return f'{int(val)}'
+
+# Find the pair of folders with the most similar images
+max_value = similarity_counts.max().max()
+max_pair = similarity_counts.stack().idxmax()
+
+# Adjust figure size based on the number of families
+num_families = len(similarity_counts)
+fig_size = (max(12, num_families * 0.5), max(12, num_families * 0.5))  # Scale up size, but have a minimum size
+
+# Plot the heatmap with proper counts
+#plt.figure(figsize=(12, 10))
+# Plot the heatmap
+plt.figure(figsize=fig_size)
+
+# Apply the formatting function to each cell's annotation
+annot = similarity_counts.applymap(format_large_numbers)
+# Plot the heatmap with formatted annotations
+ax = sns.heatmap(similarity_counts, annot=annot.values, fmt="", cmap='coolwarm', linewidths=0.5, annot_kws={"size": 6}, cbar_kws={'label': 'Number of Similar Images'})
+
+# Add the "Most Similar Pair" annotation in the bottom-left corner
+text_str = f"Most Similar Pair: {max_pair[0]}/{max_pair[1]} = {int(max_value)} similar images"
+plt.gcf().text(0.02, 0.02, text_str, fontsize=12, color='black', ha='left', 
+               bbox=dict(facecolor='lightgreen', edgecolor='black', boxstyle='round,pad=0.5'))
+
+# Add title and labels
+plt.title('Number of Similar Images Between Malware Families', fontsize=16)
+plt.xlabel('Malware Family', fontsize=10)
+plt.ylabel('Malware Family', fontsize=10)
+plt.xticks(rotation=45, ha='right', fontsize=6)
+plt.yticks(rotation=45, fontsize=6)
+
+# Save and display the heatmap
+plt.tight_layout()
+plt.savefig('final_similarity_heatmap.png')
+plt.show()
+#####################
+# Threshold for including families in the pie chart individually
+threshold_percentage = 1  # Set a threshold of 1%
+
+
+#pie Count the number of similar images for each family
+family_similarities = similarity_df[similarity_df['Is Similar'] == 1].groupby('Folder 1').size()
+#pie Calculate total similar images
+total_similar_images = family_similarities.sum()
+#pie Calculate the percentage of similar images for each family
+family_similarities_percentage = (family_similarities / total_similar_images) * 100
+
+# Group smaller sectors into "Other"
+large_families = family_similarities_percentage[family_similarities_percentage >= threshold_percentage]
+small_families = family_similarities_percentage[family_similarities_percentage < threshold_percentage].sum()
+# Add the "Other" category if needed
+if small_families > 0:
+    large_families['Other'] = small_families
+
+# Plot the pie chart
+plt.figure(figsize=(8, 8))
+plt.pie(family_similarities_percentage, labels=family_similarities.index, autopct='%1.1f%%', startangle=140)
+
+# Add a title
+plt.title('Percentage of Similar Images by Malware Family')
+
+# Display the pie chart
+plt.savefig('Percentage of Similar Images by Malware Family')
+plt.show()
