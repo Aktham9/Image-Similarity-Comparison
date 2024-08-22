@@ -243,3 +243,60 @@ plt.title('Percentage of Similar Images by Malware Family')
 # Display the pie chart
 plt.savefig('Percentage of Similar Images by Malware Family')
 plt.show()
+##################################
+# Filter the DataFrame for only similar images (where Is Similar == 1)
+similar_images_df = similarity_df[similarity_df['Is Similar'] == 1]
+
+# Plot SSIM Distribution for similar images
+plt.figure(figsize=(10, 5))
+sns.histplot(similar_images_df['SSIM'], kde=True, bins=30, color='skyblue')
+plt.title('Distribution of SSIM Scores for Similar Images')
+plt.xlabel('SSIM Score')
+plt.ylabel('Frequency')
+plt.tight_layout()
+
+# Save the SSIM histogram
+plt.savefig('ssim_distribution.png')
+
+# Display the plot
+plt.show()
+
+# Plot Pixel Difference Distribution for similar images
+plt.figure(figsize=(10, 5))
+sns.histplot(similar_images_df['Pixel Difference'], kde=True, bins=30, color='salmon')
+plt.title('Distribution of Pixel Differences for Similar Images')
+plt.xlabel('Pixel Difference')
+plt.ylabel('Frequency')
+plt.tight_layout()
+
+# Save the Pixel Difference histogram
+plt.savefig('pixel_difference_distribution.png')
+
+# Display the plot
+plt.show()
+##########################
+# Group by 'Folder 1' and 'Folder 2' and count the number of similar images
+similarity_counts_stacked = similarity_df[similarity_df['Is Similar'] == 1].groupby(['Folder 1', 'Folder 2']).size().unstack(fill_value=0)
+# Make the matrix symmetrical (add the counts both ways)
+similarity_counts_stacked = similarity_counts_stacked.add(similarity_counts_stacked.T, fill_value=0)
+# Calculate the total number of similar images for each family
+total_similar_images_per_family = similarity_counts_stacked.sum(axis=1)
+# Select the top 10 families with the most similar images
+top_10_families = total_similar_images_per_family.nlargest(10).index
+# Filter the similarity counts DataFrame to include only the top 10 families
+similarity_counts_top_10 = similarity_counts_stacked.loc[top_10_families]
+# Plot the stacked bar chart for the top 10 families
+similarity_counts_top_10.plot(kind='bar', stacked=True, figsize=(14, 8), colormap='viridis')
+
+
+# Add title and labels
+plt.title('Stacked Bar Chart of Top 10 Families with Most Similar Images (Symmetric)')
+plt.xlabel('Malware Family')
+plt.ylabel('Number of Similar Images')
+plt.xticks(rotation=45, ha='right')
+plt.legend(title='Compared with Family', bbox_to_anchor=(1.05, 1), loc='upper left')
+
+# Adjust layout for better fit and save the chart
+plt.tight_layout()
+plt.savefig('stacked_bar_top_10_similarity_counts_symmetric.png')
+plt.show()
